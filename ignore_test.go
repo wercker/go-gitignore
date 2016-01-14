@@ -15,14 +15,18 @@ func TestCompileIgnoreLines(test *testing.T) {
 
 	// Paths which are targeted by the above "lines"
 	assert.Equal(test, true, object.MatchesPath("node_modules/"), "node_modules should match")
+	assert.Equal(test, true, object.MatchesPath("node_modules/foo.js"), "node_modules should match")
 	assert.Equal(test, true, object.MatchesPath("yo.swp"), "should ignore all swp files")
 	assert.Equal(test, true, object.MatchesPath("foo/bar.wat"), "should ignore all wat files in foo")
 	assert.Equal(test, true, object.MatchesPath("nonexistent/ignore"), "should ignore files inside of here")
 	assert.Equal(test, true, object.MatchesPath("nonexistent"), "should also just ignore this whole thing")
 	assert.Equal(test, true, object.MatchesPath("baz/yo.txt"), "should ignore files inside of here")
+
 	// Paths which are not targeted by the above "lines"
 	assert.Equal(test, false, object.MatchesPath("nonexistent/foo/wat"), "should accept unignored files in ignored directories")
 	assert.Equal(test, false, object.MatchesPath("othernonexistent/"), "should allow things not in gitignore at all")
+	assert.Equal(test, false, object.MatchesPath("test/lib.js"), "should allow things not in gitignore at all")
+	assert.Equal(test, false, object.MatchesPath("wat/test/index.js"), "should allow things not in gitignore at all")
 	assert.Equal(test, false, object.MatchesPath("nonexistent/foo"), "shouldn't match unignored files")
 }
 

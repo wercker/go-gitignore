@@ -116,7 +116,7 @@ func CompileIgnoreFile(fpath string) (*GitIgnore, error) {
 	return nil, error
 }
 
-// MatchesPath is an interface function for the IgnoreParser interface.
+// MatchesPath is a function for the IgnoreParser interface.
 // It returns true if the given GitIgnore structure would target a given
 // path string "f"
 func (g GitIgnore) MatchesPath(f string) bool {
