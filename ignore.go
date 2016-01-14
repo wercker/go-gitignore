@@ -52,7 +52,6 @@ The summarized version of the same has been copied here:
 package ignore
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"regexp"
@@ -61,12 +60,6 @@ import (
 
 // An IgnoreParser is an interface which exposes two methods:
 //   MatchesPath() - Returns true if the path is targeted by the patterns compiled in the GitIgnore structure
-type IgnoreParser interface {
-	IncludesPath(f string) bool
-	IgnoresPath(f string) bool
-	MatchesPath(f string) bool
-}
-
 // GitIgnore is a struct which contains a slice of regexp.Regexp
 // patterns
 type GitIgnore struct {
@@ -88,10 +81,6 @@ func getPatternFromLine(line string) (*regexp.Regexp, bool) {
 		return nil, false
 	}
 
-	if line[0] == '/' {
-		line = line[1:]
-	}
-
 	// TODO: Handle [Rule 4] which negates the match for patterns leading with "!"
 	negatePattern := false
 	if string(line[0]) == "!" {
@@ -99,9 +88,7 @@ func getPatternFromLine(line string) (*regexp.Regexp, bool) {
 		line = line[1:]
 	}
 
-	// Handle [Rule 2, 4], when # or ! is escaped with a \
-	// Handle [Rule 4] once we tag negatePattern, strip the leading ! char
-	if regexp.MustCompile(`^(\#|\!)`).MatchString(line) {
+	if line[0] == '/' {
 		line = line[1:]
 	}
 
@@ -181,10 +168,8 @@ func CompileIgnoreFile(fpath string) (*GitIgnore, error) {
 func (g GitIgnore) MatchesPath(f string) bool {
 	// Replace OS-specific path separator.
 	f = strings.Replace(f, string(os.PathSeparator), "/", -1)
-	fmt.Printf("this is f %s \n", f)
 	matchesPath := false
 	for idx, pattern := range g.patterns {
-		fmt.Printf("%v \n", pattern)
 		if pattern.MatchString(f) {
 			matchesPath = true
 			if g.negate[idx] {
