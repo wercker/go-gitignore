@@ -2,16 +2,14 @@
 package ignore
 
 import (
-	"os"
-
-	"io/ioutil"
-	"path/filepath"
-
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"runtime"
 )
 
 const (
@@ -282,4 +280,39 @@ func TestCompileIgnoreLines_WindowsPath(test *testing.T) {
 
 	assert.Equal(test, true, object.MatchesPath("abc\\def\\child"), "abc\\def\\child should match")
 	assert.Equal(test, true, object.MatchesPath("a\\b\\c\\d"), "a\\b\\c\\d should match")
+}
+
+func TestWildCardFiles(test *testing.T) {
+	gitIgnore := []string{"*.swp", "/foo/*.wat", "bar/*.txt"}
+	object, err := CompileIgnoreLines(gitIgnore...)
+	assert.Nil(test, err, "error from CompileIgnoreLines should be nil")
+
+	// Paths which are targeted by the above "lines"
+	assert.Equal(test, true, object.MatchesPath("yo.swp"), "should ignore all swp files")
+	assert.Equal(test, true, object.MatchesPath("something/else/but/it/hasyo.swp"), "should ignore all swp files in other directories")
+
+	assert.Equal(test, true, object.MatchesPath("foo/bar.wat"), "should ignore all wat files in foo - nonpreceding /")
+	assert.Equal(test, true, object.MatchesPath("/foo/something.wat"), "should ignore all wat files in foo - preceding /")
+
+	assert.Equal(test, true, object.MatchesPath("bar/something.txt"), "should ignore all txt files in bar - nonpreceding /")
+	assert.Equal(test, true, object.MatchesPath("/bar/somethingelse.txt"), "should ignore all txt files in bar - preceding /")
+
+	// Paths which are not targeted by the above "lines"
+	assert.Equal(test, false, object.MatchesPath("something/not/infoo/wat.wat"), "wat files should only be ignored in foo")
+	assert.Equal(test, false, object.MatchesPath("something/not/infoo/wat.txt"), "txt files should only be ignored in bar")
+}
+
+func TestPrecedingSlash(test *testing.T) {
+	gitIgnore := []string{"/foo", "bar/"}
+	object, err := CompileIgnoreLines(gitIgnore...)
+	assert.Nil(test, err, "error from CompileIgnoreLines should be nil")
+
+	assert.Equal(test, true, object.MatchesPath("foo/bar.wat"), "should ignore all files in foo - nonpreceding /")
+	assert.Equal(test, true, object.MatchesPath("/foo/something.txt"), "should ignore all files in foo - preceding /")
+
+	assert.Equal(test, true, object.MatchesPath("bar/something.txt"), "should ignore all files in bar - nonpreceding /")
+	assert.Equal(test, true, object.MatchesPath("/bar/somethingelse.go"), "should ignore all files in bar - preceding /")
+	assert.Equal(test, true, object.MatchesPath("/boo/something/bar/boo.txt"), "should block all files if bar is a sub directory")
+
+	assert.Equal(test, false, object.MatchesPath("something/foo/something.txt"), "should only ignore top level foo directories- not nested")
 }

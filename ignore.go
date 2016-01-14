@@ -96,7 +96,7 @@ func getPatternFromLine(line string) (*regexp.Regexp, bool) {
 
 	// TODO: Handle [Rule 4] which negates the match for patterns leading with "!"
 	negatePattern := false
-	if string(line[0]) == "!" {
+	if line[0] == '!' {
 		negatePattern = true
 		line = line[1:]
 	}
@@ -108,7 +108,7 @@ func getPatternFromLine(line string) (*regexp.Regexp, bool) {
 	}
 
 	// If we encounter a foo/*.blah in a folder, prepend the / char
-	if regexp.MustCompile(`([^\/+])/.*\*\.`).MatchString(line) {
+	if regexp.MustCompile(`([^\/+])/.*\*\.`).MatchString(line) && line[0] != '/' {
 		line = "/" + line
 	}
 
