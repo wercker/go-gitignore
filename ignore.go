@@ -69,19 +69,25 @@ type IgnoreParser interface {
 // GitIgnore is a struct which contains a slice of regexp.Regexp
 // patterns
 type GitIgnore struct {
-	Patterns []*regexp.Regexp // List of regexp patterns which this ignore file applies
-	Negate   []bool           // List of booleans which determine if the pattern is negated
+	Patterns []IgnorePattern
+}
+
+// IgnorePattern is a selfcontained pattern line
+// it contains the regexp to match and if it should be negated
+type IgnorePattern struct {
+	Pattern *regexp.Regexp
+	Negate  bool
 }
 
 // This function pretty much attempts to mimic the parsing rules
 // listed above at the start of this file
-func getPatternFromLine(line string) (*regexp.Regexp, bool) {
+func getPatternFromLine(line string) IgnorePattern {
 	// Trim OS-specific carriage returns.
 	line = strings.TrimRight(line, "\r")
 
 	// Strip comments [Rule 2]
 	if strings.HasPrefix(line, `#`) {
-		return nil, false
+		return IgnorePattern{nil, false}
 	}
 
 	// Trim string [Rule 3]
@@ -91,7 +97,7 @@ func getPatternFromLine(line string) (*regexp.Regexp, bool) {
 	// Exit for no-ops and return nil which will prevent us from
 	// appending a pattern against this line
 	if line == "" {
-		return nil, false
+		return IgnorePattern{nil, false}
 	}
 
 	// TODO: Handle [Rule 4] which negates the match for patterns leading with "!"
@@ -148,7 +154,7 @@ func getPatternFromLine(line string) (*regexp.Regexp, bool) {
 	}
 	pattern, _ := regexp.Compile(expr)
 
-	return pattern, negatePattern
+	return IgnorePattern{pattern, negatePattern}
 }
 
 // Accepts a variadic set of strings, and returns a GitIgnore object which
@@ -157,10 +163,9 @@ func getPatternFromLine(line string) (*regexp.Regexp, bool) {
 func CompileIgnoreLines(lines ...string) (*GitIgnore, error) {
 	g := new(GitIgnore)
 	for _, line := range lines {
-		pattern, negatePattern := getPatternFromLine(line)
-		if pattern != nil {
+		pattern := getPatternFromLine(line)
+		if pattern.Pattern != nil {
 			g.Patterns = append(g.Patterns, pattern)
-			g.Negate = append(g.Negate, negatePattern)
 		}
 	}
 	return g, nil
@@ -185,10 +190,10 @@ func (g GitIgnore) MatchesPath(f string) bool {
 	f = strings.Replace(f, string(os.PathSeparator), "/", -1)
 
 	matchesPath := false
-	for idx, pattern := range g.Patterns {
-		if pattern.MatchString(f) {
+	for _, pattern := range g.Patterns {
+		if pattern.Pattern.MatchString(f) {
 			// If this is a regular target (not negated with a gitignore exclude "!" etc)
-			if !g.Negate[idx] {
+			if !pattern.Negate {
 				matchesPath = true
 				// Negated pattern, and matchesPath is already set
 			} else if matchesPath {
